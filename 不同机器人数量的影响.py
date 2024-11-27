@@ -35,82 +35,74 @@ def get_random_points_inside_rectangle(rectangle, num_points, case):
     case: 分布类型对应的数字 (1-8)
     """
     x_min, y_min, x_max, y_max = rectangle
-    points = []
+    points_set = set()
+    
+    def add_point(x, y):
+        if (x, y) not in points_set and x_min <= x <= x_max and y_min <= y <= y_max:
+            points_set.add((x, y))
+            return True
+        return False
 
-    if case == 1:
-        # 1. 底部集中分布
-        points = [
-            (random.randint(x_min, x_max), random.randint(y_max - int(0.2 * (y_max - y_min)), y_max))
-            for _ in range(num_points)
-        ]
-    
-    elif case == 2:
-        # 2. 底部分散分布
-        points = [
-            (random.randint(x_min, x_max), random.randint(y_max - int(0.3 * (y_max - y_min)), y_max))
-            for _ in range(num_points)
-        ]
-    
-    elif case == 3:
-        # 3. 区域内随机分散分布
-        points = [
-            (random.randint(x_min, x_max), random.randint(y_min, y_max))
-            for _ in range(num_points)
-        ]
-    
-    elif case == 4:
-        # 4. 区域内随机集中分布
-        center_x = (x_min + x_max) // 2
-        center_y = (y_min + y_max) // 2
-        half_width = (x_max - x_min) // 4
-        half_height = (y_max - y_min) // 4
+    while len(points_set) < num_points:
+        if case == 1:
+            # 1. 底部集中分布
+            x = random.randint(x_min, x_max)
+            y = random.randint(y_max - int(0.2 * (y_max - y_min)), y_max)
         
-        points = [
-            (random.randint(center_x - half_width, center_x + half_width),
-             random.randint(center_y - half_height, center_y + half_height))
-            for _ in range(num_points)
-        ]
-    
-    elif case == 5:
-        # 5. 正对角线分布
-        diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
-        points = [
-            (int(x_min + i * (x_max - x_min) / (num_points - 1)),
-             int(y_min + i * (y_max - y_min) / (num_points - 1)))
-            for i in range(num_points)
-        ]
-    
-    elif case == 6:
-        # 6. 反对角线分布
-        diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
-        points = [
-            (int(x_min + i * (x_max - x_min) / (num_points - 1)),
-             int(y_max - i * (y_max - y_min) / (num_points - 1)))
-            for i in range(num_points)
-        ]
-    
-    elif case == 7:
-        # 7. 过区域中心点平行X轴分布
-        center_x = (x_min + x_max) // 2
-        center_y = (y_min + y_max) // 2
-        points = [
-            (random.randint(x_min, x_max), center_y)
-            for _ in range(num_points)
-        ]
-    
-    elif case == 8:
-        # 8. 过中心点平行Y轴分布
-        center_x = (x_min + x_max) // 2
-        center_y = (y_min + y_max) // 2
-        points = [
-            (center_x, random.randint(y_min, y_max))
-            for _ in range(num_points)
-        ]
-    
-    else:
-        raise ValueError("Invalid case number. Choose a number between 1 and 8.")
+        elif case == 2:
+            # 2. 底部分散分布
+            x = random.randint(x_min, x_max)
+            y = random.randint(y_max - int(0.3 * (y_max - y_min)), y_max)
+        
+        elif case == 3:
+            # 3. 区域内随机分散分布
+            x = random.randint(x_min, x_max)
+            y = random.randint(y_min, y_max)
+        
+        elif case == 4:
+            # 4. 区域内随机集中分布
+            center_x = (x_min + x_max) // 2
+            center_y = (y_min + y_max) // 2
+            half_width = (x_max - x_min) // 4
+            half_height = (y_max - y_min) // 4
+            
+            x = random.randint(center_x - half_width, center_x + half_width)
+            y = random.randint(center_y - half_height, center_y + half_height)
+        
+        elif case == 5:
+            # 5. 正对角线分布
+            diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
+            t = random.random()
+            x = int(x_min + t * (x_max - x_min))
+            y = int(y_min + t * (y_max - y_min))
+        
+        elif case == 6:
+            # 6. 反对角线分布
+            diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
+            t = random.random()
+            x = int(x_min + t * (x_max - x_min))
+            y = int(y_max - t * (y_max - y_min))
+        
+        elif case == 7:
+            # 7. 过区域中心点平行X轴分布
+            center_x = (x_min + x_max) // 2
+            center_y = (y_min + y_max) // 2
+            x = random.randint(x_min, x_max)
+            y = center_y
+        
+        elif case == 8:
+            # 8. 过中心点平行Y轴分布
+            center_x = (x_min + x_max) // 2
+            center_y = (y_min + y_max) // 2
+            x = center_x
+            y = random.randint(y_min, y_max)
+        
+        else:
+            raise ValueError("Invalid case number. Choose a number between 1 and 8.")
+        
+        add_point(x, y)
 
-    return points
+    return list(points_set)
 
 # 检查坐标是否有效
 def check_positions(map_grid, positions):
@@ -255,7 +247,7 @@ def is_valid_region(new_position, map_grid, obstacle_size):
     return True
 
 
-def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=1000, step_size=5, target_step_size=10, scope=100,stop_step = 2):
+def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=1000, step_size=5, target_step_size=10, scope=100):
     num_robots = len(robots_positions)
     alpha_pos = [(float('inf'), float('inf'))] * num_robots
     beta_pos = [(float('inf'), float('inf'))] * num_robots
@@ -366,7 +358,7 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
                 
         # Check termination condition
         min_distance = min([np.sqrt((pos[0] - target_position[0])**2 + (pos[1] - target_position[1])**2) for pos in robots_positions])
-        if min_distance < stop_step:
+        if min_distance < 2:
             # print(f"Termination Condition Met: Distance to Target < 5 after {iteration} iterations.")
             break
         elif iteration >= max_iterations - 1:
@@ -413,7 +405,7 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
     
     return robots_positions, paths, target_position, target_path,iteration
 
-def main1():
+def main2():
     #random_seed = 16
     random_seed = random.randint(1,100)
     # 设置随机种子以保证结果可重复
@@ -506,84 +498,170 @@ def success_rate_output(iteration_to_plot,success_rates):
     #print(success_rates)
     return iteration_success_rate,success_rates
 
-
-def main():
+def main_succ_rate_with_diff_robots():
     # 设置随机种子以保证结果可重复
     random_seed = random.randint(1, 100)
     random.seed(random_seed)
     np.random.seed(random_seed)
     
-    grid_sizes = [100, 200, 300, 400, 600, 800, 1000]
-    grid_size_test = [400]
-    num_robots = 5
+    grid_sizes = [300]
+    robot_counts = [3, 6]
     step_size = 2
     target_step_size = 1
+    scope = 10
+    robot_rectangle = (1, 1, 50, 50)
     
-    
-    
-    # 存储每个网格大小的成功率
-    #收敛半径
-    stop_size = step_size
-    success_rates_by_grid_size = {}
-
-    for grid_size in grid_size_test:
-        robot_rectangle = (1, 1, grid_size - 2, grid_size - 2)
-        success_rates = []
+    for grid_size in grid_sizes:
         num_obstacles = int(grid_size / 20)
         obstacle_size = int(grid_size / 20)
-        max_iterations = int(grid_size * math.sqrt(2) * 1)
-        scope = 10
-        for j in range(1):  # 每次搜索三轮
-            iteration_to_plot = []
-            for i in range(5):  # 每轮搜索五次
-                # 生成地图
-                map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
-                
-                # 放置机器人和目标
-                robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
-                
-                # 记录初始机器人位置
-                initial_robots_positions = robots_positions[:]
-                
-                # 运行GWO算法
-                final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
-                    map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope,stop_size
-                )
-                
-                # 更新地图上的机器人位置
-                for pos in initial_robots_positions:
-                    map_grid[pos] = 0
-                for pos in final_positions:
-                    map_grid[pos] = 2
-                
-                # 绘制最终地图及路径
-                plot_map(map_grid, initial_robots_positions, final_positions, target_path, paths)
-                
-                iteration_to_plot.append(iteration)
-            
-            # 输出成功率，并存储
-            iteration_success_rate, success_rates = success_rate_output(iteration_to_plot, success_rates)
-            print(f"Time of {j + 1} success rate is {iteration_success_rate * 100:.2f}%")
+        max_iterations = int(grid_size * math.sqrt(2))
         
-        # 计算每个网格大小的平均成功率
-        avg_success_rate = sum(success_rates) / len(success_rates)
-        success_rates_by_grid_size[grid_size] = avg_success_rate
-        print(f"The average success rate = {avg_success_rate * 100:.2f}% when grid_size = {grid_size}")
-    
-    # 绘制柱状图
-    grid_sizes = list(success_rates_by_grid_size.keys())
-    success_rates = list(success_rates_by_grid_size.values())
-    
-    plt.bar(grid_sizes, success_rates, color='blue',width = 20)
-    plt.title('Success Rate vs Grid Size')
-    plt.xlabel('Grid Size')
-    plt.ylabel('Success Rate (%)')
-    plt.xticks(grid_sizes)
-    plt.yticks(np.arange(0, 1.1, 0.1))
-    plt.show()
+        # 存储不同机器人数量的成功率
+        success_rates_dict = {num_robots: [] for num_robots in robot_counts}
+        
+        for num_robots in robot_counts:
+            for j in range(1):  # 每次搜索三轮
+                iteration_to_plot = []
+                
+                for i in range(5):  # 每轮5次
+                    # 生成地图
+                    map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
+                    
+                    # 放置机器人和目标
+                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
+                    
+                    # 记录初始机器人位置
+                    initial_robots_positions = robots_positions[:]
+                    
+                    # 运行GWO算法
+                    final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
+                        map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope
+                    )
+                    
+                    # 更新地图上的机器人位置
+                    for pos in initial_robots_positions:
+                        map_grid[pos] = 0
+                    for pos in final_positions:
+                        map_grid[pos] = 2
+                    
+                    # 绘制最终地图及路径
+                    plot_map(map_grid, initial_robots_positions, final_positions, target_path, paths)
+                    
+                    iteration_to_plot.append(iteration)
+                
+                # 输出成功率，并存储
+                iteration_success_rate, success_rates = success_rate_output(iteration_to_plot, [])
+                success_rates_dict[num_robots].append(iteration_success_rate)
+                print(f"Time of {j + 1} success rate with {num_robots} robots is {iteration_success_rate * 100}%")
+            
+            # 计算平均成功率
+            avg_success_rate = sum(success_rates_dict[num_robots]) / len(success_rates_dict[num_robots])
+            print(f"The average success rate with {num_robots} robots is {avg_success_rate * 100}% when grid_size = {grid_size}")
+        
+        # 绘制不同机器人数量的成功率图
+        plt.figure()
+        for num_robots in robot_counts:
+            x = range(len(success_rates_dict[num_robots]))
+            plt.scatter(x, success_rates_dict[num_robots], label=f'{num_robots} robots')
+        
+        plt.xlabel('Experiment Number')
+        plt.ylabel('Success Rate')
+        plt.title(f'Success Rates for Different Robot Counts (Grid Size = {grid_size})')
+        plt.legend()
+        plt.show()
 
-if __name__ == "__main__":
-    main()
+def main_succ_rate_plus_ite_times():
+    # 设置随机种子以保证结果可重复
+    random_seed = random.randint(1, 100)
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    
+    grid_sizes = [300]
+    robot_counts = [3, 6]
+    step_size = 2
+    target_step_size = 1
+    scope = 10
+    
+    
+    for grid_size in grid_sizes:
+        robot_rectangle = (1, 1, grid_size, grid_size)
+        num_obstacles = int(grid_size / 20)
+        obstacle_size = int(grid_size / 20)
+        max_iterations = int(grid_size * math.sqrt(2))
+        
+        # 存储不同机器人数量的成功率和迭代次数
+        success_rates_dict = {num_robots: [] for num_robots in robot_counts}
+        iteration_counts_dict = {num_robots: [] for num_robots in robot_counts}
+        
+        for num_robots in robot_counts:
+            for j in range(1):  # 每次搜索三轮
+                iteration_to_plot = []
+                iteration_counts = []
+                
+                for i in range(5):  # 每轮5次
+                    # 生成地图
+                    map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
+                    
+                    # 放置机器人和目标
+                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
+                    
+                    # 记录初始机器人位置
+                    initial_robots_positions = robots_positions[:]
+                    
+                    # 运行GWO算法
+                    final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
+                        map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope
+                    )
+                    
+                    # 更新地图上的机器人位置
+                    for pos in initial_robots_positions:
+                        map_grid[pos] = 0
+                    for pos in final_positions:
+                        map_grid[pos] = 2
+                    
+                    # 绘制最终地图及路径
+                    plot_map(map_grid, initial_robots_positions, final_positions, target_path, paths)
+                    
+                    iteration_to_plot.append(iteration)
+                    iteration_counts.append(iteration)
+                
+                # 输出成功率，并存储
+                iteration_success_rate, success_rates = success_rate_output(iteration_to_plot, [])
+                success_rates_dict[num_robots].append(iteration_success_rate)
+                iteration_counts_dict[num_robots].extend(iteration_counts)
+                print(f"Time of {j + 1} success rate with {num_robots} robots is {iteration_success_rate * 100}%")
+            
+            # 计算平均成功率
+            avg_success_rate = sum(success_rates_dict[num_robots]) / len(success_rates_dict[num_robots])
+            print(f"The average success rate with {num_robots} robots is {avg_success_rate * 100}% when grid_size = {grid_size}")
+        
+        # 绘制不同机器人数量的成功率图和迭代次数图
+        fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+        
+        # 成功率图
+        for num_robots in robot_counts:
+            x = range(len(success_rates_dict[num_robots]))
+            axs[0].scatter(x, success_rates_dict[num_robots], label=f'{num_robots} robots')
+        
+        axs[0].set_xlabel('Experiment Number')
+        axs[0].set_ylabel('Success Rate')
+        axs[0].set_title(f'Success Rates for Different Robot Counts (Grid Size = {grid_size})')
+        axs[0].legend()
+        
+        # 迭代次数图
+        for num_robots in robot_counts:
+            x = range(len(iteration_counts_dict[num_robots]))
+            axs[1].scatter(x, iteration_counts_dict[num_robots], label=f'{num_robots} robots')
+        
+        axs[1].set_xlabel('Experiment Number')
+        axs[1].set_ylabel('Iteration Count')
+        axs[1].set_title(f'Iteration Counts for Different Robot Counts (Grid Size = {grid_size})')
+        axs[1].legend()
+        
+        plt.tight_layout()
+        plt.show()
+if __name__ == '__main__':
+    main_succ_rate_plus_ite_times()
 
 
 

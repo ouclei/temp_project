@@ -28,16 +28,89 @@ def generate_map(grid_size, num_obstacles, obstacle_size):
     return map_grid
 
 # 随机生成矩形内的坐标
-def get_random_points_inside_rectangle(rectangle, num_points):
+# 随机生成矩形内的坐标
+def get_random_points_inside_rectangle(rectangle, num_points, case):
     """
     rectangle: (x_min, y_min, x_max, y_max) 矩形边界
     num_points: 生成的随机点数量
+    case: 分布类型对应的数字 (1-8)
     """
     x_min, y_min, x_max, y_max = rectangle
-    points = [
-        (random.randint(x_min, x_max), random.randint(y_min, y_max))
-        for _ in range(num_points)
-    ]
+    points = []
+
+    if case == 1:
+        # 1. 底部集中分布
+        points = [
+            (random.randint(x_min, x_max), random.randint(y_max - int(0.2 * (y_max - y_min)), y_max))
+            for _ in range(num_points)
+        ]
+    
+    elif case == 2:
+        # 2. 底部分散分布
+        points = [
+            (random.randint(x_min, x_max), random.randint(y_max - int(0.3 * (y_max - y_min)), y_max))
+            for _ in range(num_points)
+        ]
+    
+    elif case == 3:
+        # 3. 区域内随机分散分布
+        points = [
+            (random.randint(x_min, x_max), random.randint(y_min, y_max))
+            for _ in range(num_points)
+        ]
+    
+    elif case == 4:
+        # 4. 区域内随机集中分布
+        center_x = (x_min + x_max) // 2
+        center_y = (y_min + y_max) // 2
+        half_width = (x_max - x_min) // 4
+        half_height = (y_max - y_min) // 4
+        
+        points = [
+            (random.randint(center_x - half_width, center_x + half_width),
+             random.randint(center_y - half_height, center_y + half_height))
+            for _ in range(num_points)
+        ]
+    
+    elif case == 5:
+        # 5. 正对角线分布
+        diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
+        points = [
+            (int(x_min + i * (x_max - x_min) / (num_points - 1)),
+             int(y_min + i * (y_max - y_min) / (num_points - 1)))
+            for i in range(num_points)
+        ]
+    
+    elif case == 6:
+        # 6. 反对角线分布
+        diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
+        points = [
+            (int(x_min + i * (x_max - x_min) / (num_points - 1)),
+             int(y_max - i * (y_max - y_min) / (num_points - 1)))
+            for i in range(num_points)
+        ]
+    
+    elif case == 7:
+        # 7. 过区域中心点平行X轴分布
+        center_x = (x_min + x_max) // 2
+        center_y = (y_min + y_max) // 2
+        points = [
+            (random.randint(x_min, x_max), center_y)
+            for _ in range(num_points)
+        ]
+    
+    elif case == 8:
+        # 8. 过中心点平行Y轴分布
+        center_x = (x_min + x_max) // 2
+        center_y = (y_min + y_max) // 2
+        points = [
+            (center_x, random.randint(y_min, y_max))
+            for _ in range(num_points)
+        ]
+    
+    else:
+        raise ValueError("Invalid case number. Choose a number between 1 and 8.")
+
     return points
 
 # 检查坐标是否有效
@@ -67,7 +140,7 @@ def generate_valid_positions(map_grid, rectangle, num_robots):
     robots_positions = []
     while len(robots_positions) < num_robots:
         # 生成随机点
-        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots)
+        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots,random.randint(1,8))
         # 检测随机点是否有效
         valid_positions = check_positions(map_grid, candidate_positions)
         # 添加有效点到最终列表
@@ -373,7 +446,7 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
                 
         # Check termination condition
         min_distance = min([np.sqrt((pos[0] - target_position[0])**2 + (pos[1] - target_position[1])**2) for pos in robots_positions])
-        if min_distance < 2:
+        if min_distance < stop_step:
             # print(f"Termination Condition Met: Distance to Target < 5 after {iteration} iterations.")
             break
         elif iteration >= max_iterations - 1:
@@ -459,8 +532,9 @@ def main1():
     # position3 = [(100, 0), (100, 80), (5, 160), (5, 210), (5, 280)]
     grid_1 = [100,200,300]
     grid_2 = [400,600,800,1000]
+    grid_test = [300]
     iteration_all = []
-    for grid_size in grid_1:
+    for grid_size in grid_test:
         #每次搜索三轮，一轮5次
         # success_rates = []
         num_obstacles = int(grid_size/20)
@@ -543,22 +617,24 @@ def main():
     np.random.seed(random_seed)
     
     grid_sizes = [100, 200, 300,400,500,600]
+    grid_test = [100,200,300]
     num_robots = 5
     step_size = 2
     target_step_size = 0.8
-    robot_rectangle = (1, 1, 50, 50)
+    
     max_iterations = 1000  # 设定最大迭代次数
     stop_step = step_size
-    scope = 0.1 * max(grid_sizes)
     
+    # scope = 0.1 * max(grid_sizes)
+    scope = 10
     # 存储每个网格大小的平均迭代次数
     avg_iterations = []
 
-    for grid_size in grid_sizes:
+    for grid_size in grid_test:
         iteration_results = []
-        
+        robot_rectangle = (1, 1, grid_size-2, grid_size-2)
         # 对每个网格大小生成三次地图
-        for _ in range(3):
+        for _ in range(1):
             num_obstacles = int(grid_size / 20)
             obstacle_size = int(grid_size / 20)
             
@@ -596,7 +672,7 @@ def main():
         avg_iterations.append(sum(iteration_results) / len(iteration_results))
     
     # 绘制折线图
-    plt.plot(grid_sizes, avg_iterations, marker='x', linestyle='-', color='red')
+    plt.plot(grid_test, avg_iterations, marker='x', linestyle='-', color='red')
     plt.title('Average Iterations vs Grid Size')
     plt.xlabel('Grid Size')
     plt.ylabel('Average Iterations')

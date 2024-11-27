@@ -28,6 +28,7 @@ def generate_map(grid_size, num_obstacles, obstacle_size):
     return map_grid
 
 # 随机生成矩形内的坐标
+# 随机生成矩形内的坐标
 def get_random_points_inside_rectangle(rectangle, num_points, case):
     """
     rectangle: (x_min, y_min, x_max, y_max) 矩形边界
@@ -128,57 +129,52 @@ def check_positions(map_grid, positions):
     return valid_positions
 
 # 主检测逻辑
-def generate_valid_positions(map_grid, rectangle, num_robots):
+# 主检测逻辑
+def generate_valid_positions(map_grid, rectangle, num_robots, case):
     """
     生成有效的机器人初始坐标点
     map_grid: 地图数组
     rectangle: 矩形边界 (x_min, y_min, x_max, y_max)
     num_robots: 需要的机器人数量
+    case: 分布类型对应的数字 (1-8)
     返回有效坐标点列表
     """
-    robots_positions = []
+    robots_positions = set()
+    
     while len(robots_positions) < num_robots:
         # 生成随机点
-        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots,random.randint(1,8))
+        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots, case)
         # 检测随机点是否有效
         valid_positions = check_positions(map_grid, candidate_positions)
-        # 添加有效点到最终列表
-        robots_positions.extend(valid_positions[:num_robots - len(robots_positions)])
-    return robots_positions
+        # 添加有效点到最终集合
+        robots_positions.update(valid_positions)
+    
+    return list(robots_positions)
 
-def place_robots_and_target(map_grid, num_robots,robot_ractangle):
-    grid_size = map_grid.shape[0]
-    robots_positions = []
+# 生成随机点
+
+
+def place_robots_and_target(map_grid, num_robots, robot_rectangle, case):
+    """
+    在地图上放置机器人和目标。
     
-    # 固定机器人在 (50, 50) 范围内的不同位置
-    #随机生成坐标，如果碰见障碍物，重新生成
+    :param map_grid: 地图网格
+    :param num_robots: 机器人数量
+    :param robot_rectangle: 机器人活动范围矩形 (x_min, y_min, x_max, y_max)
+    :param case: 分布类型对应的数字 (1-8)
+    :return: 机器人位置列表和目标位置
+    """
+    robots_positions = generate_valid_positions(map_grid, robot_rectangle, num_robots, case)
     
-    position0 = generate_valid_positions(map_grid, robot_ractangle, num_robots)        
-    fixed_positions = position0
-    tag_while = True
-    tag_right = 0
-    while(tag_while):
-        for i in range(num_robots):
-            x, y = fixed_positions[i]
-            if map_grid[x, y] == 0:  # 确保不在障碍物上
-                robots_positions.append((x, y)) 
-                map_grid[x, y] = 2  # 标记为机器人z
-                # break
-            else:
-                # raise ValueError(f"Robot position {fixed_positions[i]} is blocked by an obstacle.")
-                break
-        tag_while = False
-   
-    # 随机生成目标
-    target_position = (random.randint(1, grid_size-1),random.randint(1, grid_size-1))
-    while(map_grid[target_position] == 1):
-        target_position = (random.randint(1, grid_size-1),random.randint(1, grid_size-1))
-    if map_grid[target_position] == 0:  # 确保不在障碍物或机器人上
-        map_grid[target_position] = 3  # 标记为目标
-    else:
-        raise ValueError("Target position is blocked by an obstacle or another robot.")
+    # 确保目标位置不在障碍物区域且不在机器人位置
+    target_position = None
+    while target_position is None or map_grid[target_position] != 0 or target_position in robots_positions:
+        x = random.randint(robot_rectangle[0], robot_rectangle[2] - 1)
+        y = random.randint(robot_rectangle[1], robot_rectangle[3] - 1)
+        target_position = (x, y)
     
     return robots_positions, target_position
+
 
 def plot_map(map_grid, initial_robots_positions, final_robots_positions, target_path, paths):
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -254,8 +250,77 @@ def is_valid_region(new_position, map_grid, obstacle_size):
 
     return True
 
+from heapq import heappop, heappush
 
-def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=1000, step_size=5, target_step_size=10, scope=100,stop_step = 2):
+# 启发式函数：曼哈顿距离
+def heuristic(a, b):
+    """
+    启发式函数，计算点a到点b的曼哈顿距离。
+    a, b: 坐标点 (x, y)
+    """
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+# A*路径规划算法
+def a_star_search(map_grid, start, goal):
+    """
+    使用A*算法在地图上找到从start到goal的最短路径。
+    
+    map_grid: 2D地图数组，0表示可通行，1表示障碍物
+    start: 起点坐标 (x, y)
+    goal: 目标点坐标 (x, y)
+    
+    返回:
+    - 路径: 包含从start到goal的所有坐标点列表。如果无法到达目标，返回空列表。
+    """
+    grid_size = map_grid.shape[0]
+    open_set = []
+    heappush(open_set, (0, start))  # 优先级队列，存储 (优先级, 当前点)
+    came_from = {}  # 跟踪路径
+    cost_so_far = {start: 0}  # 起点到各点的当前累计代价
+
+    while open_set:
+        # 取出优先级最低（估算总代价最小）的节点
+        _, current = heappop(open_set)
+
+        if current == goal:  # 找到目标
+            break
+
+        # 遍历当前节点的邻居（上下左右四个方向）
+        neighbors = [
+            (current[0] + dx, current[1] + dy)
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        ]
+        # 筛选有效邻居节点（在地图范围内且非障碍物）
+        neighbors = [
+            n for n in neighbors
+            if 0 <= n[0] < grid_size and 0 <= n[1] < grid_size and map_grid[n[0], n[1]] == 0
+        ]
+
+        for neighbor in neighbors:
+            # 当前路径到邻居的代价为1（可以根据需求调整代价）
+            new_cost = cost_so_far[current] + 1
+            # 如果邻居未被访问过，或找到更优的路径，则更新
+            if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
+                cost_so_far[neighbor] = new_cost
+                priority = new_cost + heuristic(neighbor, goal)
+                heappush(open_set, (priority, neighbor))
+                came_from[neighbor] = current
+
+    # 如果目标点未被访问，返回空路径
+    if goal not in came_from:
+        return []
+
+    # 通过回溯找到完整路径
+    path = []
+    current = goal
+    while current != start:
+        path.append(current)
+        current = came_from[current]
+    path.reverse()  # 起点到目标的顺序
+    return path
+
+
+def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=1000, step_size=2, target_step_size=1, scope=100,stop_step=2):
     num_robots = len(robots_positions)
     alpha_pos = [(float('inf'), float('inf'))] * num_robots
     beta_pos = [(float('inf'), float('inf'))] * num_robots
@@ -351,16 +416,26 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
                 paths[i].append(robots_positions[i])
             else:
                 # Escape Mechanism
-                escape_range = 20
-                escape_x = random.randint(-escape_range, escape_range)
-                escape_y = random.randint(-escape_range, escape_range)
-                new_escape_position = (
-                    min(max(robots_positions[i][0] + escape_x, 0), grid_size - 1),
-                    min(max(robots_positions[i][1] + escape_y, 0), grid_size - 1)
-                )
-                if map_grid[new_escape_position[0], new_escape_position[1]] == 0:
-                    robots_positions[i] = new_escape_position
-                    paths[i].append(robots_positions[i])
+                # escape_range = 20
+                # escape_x = random.randint(-escape_range, escape_range)
+                # escape_y = random.randint(-escape_range, escape_range)
+                # new_escape_position = (
+                #     min(max(robots_positions[i][0] + escape_x, 0), grid_size - 1),
+                #     min(max(robots_positions[i][1] + escape_y, 0), grid_size - 1)
+                # )
+                # if map_grid[new_escape_position[0], new_escape_position[1]] == 0:
+                #     robots_positions[i] = new_escape_position
+                #     paths[i].append(robots_positions[i])
+                
+                
+                #a* Mechanism
+                path = a_star_search(map_grid, robots_positions[i], target_position)
+                if path:
+                    next_position = path[0]  # 获取路径中的下一步
+                    robots_positions[i] = next_position
+                    paths[i].append(next_position)
+                else:
+                    print(f"Robot {i} failed to find a valid path.")
                     
         
                 
@@ -399,6 +474,26 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
                 if 0 <= new_target_position[0] < grid_size and 0 <= new_target_position[1] < grid_size and map_grid[new_target_position[0], new_target_position[1]] == 0:
                     target_position = new_target_position
                     target_path.append(target_position)
+                else:
+                    # 使用A*算法计算目标逃逸路径
+                    escape_goal = (
+                        random.randint(0, grid_size - 1),  # 随机生成一个远离机器人的点作为逃逸目标
+                        random.randint(0, grid_size - 1)
+                    )
+                    while map_grid[escape_goal[0], escape_goal[1]] != 0:  # 确保逃逸目标无障碍物
+                        escape_goal = (
+                            random.randint(0, grid_size - 1),
+                            random.randint(0, grid_size - 1)
+                        )
+
+                    path = a_star_search(map_grid, target_position, escape_goal)
+                    if path:
+                        next_escape_position = path[0]  # 获取路径中的下一步
+                        target_position = next_escape_position
+                        target_path.append(target_position)
+                    else:
+                        print("Target failed to escape.")
+
         
         # Update target position on map
         map_grid[:, :] = 0  # Clear previous target and obstacles
@@ -424,20 +519,25 @@ def main1():
     num_robots = 5
     
     step_size = 2
-    target_step_size = 1
-    scope = 100
+    target_step_size = 0.8
+    
     robot_ractangle = (1,1,50,50)
     # position1 = [(10, 15), (21, 10), (35, 33), (14, 2), (22, 3)] #集中分布与左上角
     # position2 = [(5, 1), (5, 80), (5, 160), (5, 210), (5, 280)] #分散分布与顶部
     # position3 = [(100, 0), (100, 80), (5, 160), (5, 210), (5, 280)]
-    grid_1 = [100,200,300,400]
-    grid_2 = [600,800,1000]
-    for grid_size in grid_2:
+    grid_1 = [100,200,300]
+    grid_2 = [400,600,800,1000]
+    grid_test = [300]
+    iteration_all = []
+    for grid_size in grid_test:
         #每次搜索三轮，一轮5次
-        success_rates = []
+        # success_rates = []
         num_obstacles = int(grid_size/20)
         obstacle_size = int(grid_size/20)
         max_iterations = int(grid_size * math.sqrt(2))
+        stop_step = step_size
+        scope = grid_size* 0.1
+        
         for j in range(3):
             iteration_to_plot = []
             
@@ -454,7 +554,7 @@ def main1():
                 initial_robots_positions = robots_positions[:]
                 
                 # 运行GWO算法
-                final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope)
+                final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope,stop_step)
                 
                 # 更新地图上的机器人位置
                 for pos in initial_robots_positions:
@@ -468,26 +568,303 @@ def main1():
                 iteration_to_plot.append(iteration)
                 # print(f'i={i+1}')
                 
-            # 创建新的Figure对象用于本次绘图
-            # fig = plt.figure()    
-            # 设置横坐标，用元素的索引作为横坐标
-            x = range(len(iteration_to_plot))
-
-               # 绘制散点图
-            plt.scatter(x, iteration_to_plot)
+            #把每次的迭代次数收集起来，输出本轮迭代平均值
+            for i in range(len(iteration_to_plot)):
+                iteration_all.append(iteration_to_plot[i])
+            print(f'time of {j+1} avg iteration is {sum(iteration_to_plot) / len(iteration_to_plot)}')
+            
+           
             # print(iteration_to_plot)
             
-            #输出成功率，并存储        
-            iteration_success_rate , success_rates = success_rate_output(iteration_to_plot,success_rates)
-            print(f"time of {j+1} success rate is {iteration_success_rate*100}%")
+            # #输出成功率，并存储        -*
+            # iteration_success_rate , success_rates = success_rate_output(iteration_to_plot,success_rates)
+            # print(f"time of {j+1} success rate is {iteration_success_rate*100}%")
         
         
-        #在当前环境下，取三次仿真实验所得的平均值，降低误差
-        avg_success_rates = sum(success_rates)/len(success_rates)    
-        print(f'the avg success rate = {avg_success_rates*100}% when grid_size = {grid_size}')     
-        plt.title(f'the iteration of {j+1} s plot' )
-        plt.show()
+        # #在当前环境下，取三次仿真实验所得的平均值，降低误差
+        # avg_success_rates = sum(success_rates)/len(success_rates)    
+        # print(f'the avg success rate = {avg_success_rates*100}% when grid_size = {grid_size}')     
+        avg_iterations_all = sum(iteration_all) / len(iteration_all)
+        print(f'the avg iteration for all = {avg_iterations_all} when grid_size = {grid_size}')  
+        
+        # 创建新的Figure对象用于本次绘图
+        # fig = plt.figure()    
+        # 设置横坐标，用元素的索引作为横坐标
+    x = range(len(iteration_all))
+
+
+           # 绘制散点图
+    plt.scatter(x, iteration_all)
+    plt.title(f'the iteration of {j+1} s plot' )
+    plt.show()
     
+    #绘制柱状图
+    categories = ['A', 'B', 'C']
+    values = [23, 45, 56, 78]
+    # 创建柱状图
+    plt.bar(categories, values, color='skyblue')
+    
+def main2():
+
+    # 设置随机种子以保证结果可重复
+    random_seed = random.randint(1, 100)
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    
+    grid_sizes = [100, 200, 300,400,500,600]
+    grid_test = [300]
+    num_robots = 5
+    step_size = 2
+    target_step_size = 0.8
+    
+    max_iterations = 1000  # 设定最大迭代次数
+    stop_step = step_size
+    
+    # scope = 0.1 * max(grid_sizes)
+    scope = 10
+    # 存储每个网格大小的平均迭代次数
+    avg_iterations = []
+
+    for grid_size in grid_test:
+        iteration_results = []
+        robot_rectangle = (1, 1, grid_size-2, grid_size-2)
+        # 对每个网格大小生成三次地图
+        for _ in range(1):
+            num_obstacles = int(grid_size / 20)
+            obstacle_size = int(grid_size / 20)
+            
+            iteration_to_plot = []
+            
+            for _ in range(5):
+                # 生成地图
+                map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
+                
+                # 放置机器人和目标
+                robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
+                
+                # 记录初始机器人位置
+                initial_robots_positions = robots_positions[:]
+                
+                # 运行GWO算法
+                final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
+                    map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope, stop_step
+                )
+                
+                # 更新地图上的机器人位置
+                for pos in initial_robots_positions:
+                    map_grid[pos] = 0
+                for pos in final_positions:
+                    map_grid[pos] = 2
+                
+                # 记录本次迭代次数
+                iteration_to_plot.append(iteration)
+            
+            # 计算本次地图生成的平均迭代次数
+            avg_iteration = sum(iteration_to_plot) / len(iteration_to_plot)
+            iteration_results.append(avg_iteration)
+        
+        # 计算每个网格大小的平均迭代次数
+        avg_iterations.append(sum(iteration_results) / len(iteration_results))
+    
+    # 绘制折线图
+    plt.plot(grid_test, avg_iterations, marker='x', linestyle='-', color='red')
+    plt.title('Average Iterations vs Grid Size')
+    plt.xlabel('Grid Size')
+    plt.ylabel('Average Iterations')
+    plt.grid(True)
+    plt.show()
+
+def main3():
+    
+    # 定义每个CASE的描述
+    case_descriptions = {
+       1: "底部集中分布",
+       2: "底部分散分布",
+       3: "区域内随机分散分布",
+       4: "区域内随机集中分布",
+       5: "正对角线分布",
+       6: "反对角线分布",
+       7: "过区域中心点平行X轴分布",
+       8: "过中心点平行Y轴分布"
+   }
+    # 设置随机种子以保证结果可重复
+    random_seed = random.randint(1, 100)
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    
+    grid_sizes = [100, 200, 300, 400, 500, 600]
+    grid_test = [300]
+    num_robots = 5
+    step_size = 2
+    target_step_size = 0.8
+    
+    max_iterations = 1000  # 设定最大迭代次数
+    stop_step = step_size
+    
+    # scope = 0.1 * max(grid_sizes)
+    scope = 10
+    
+    # 存储每个网格大小的平均迭代次数
+    avg_iterations_by_case = {case: [] for case in range(1, 9)}
+
+    for grid_size in grid_test:
+        robot_rectangle = (1, 1, grid_size-2, grid_size-2)
+        # 对每个网格大小生成三次地图
+        for _ in range(1):
+            num_obstacles = int(grid_size / 20)
+            obstacle_size = int(grid_size / 20)
+            
+            for case in range(1, 9):  # 按顺序从1到8轮流实验
+                iteration_to_plot = []
+                
+                for _ in range(5):
+                    # 生成地图
+                    map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
+                    
+                    # 放置机器人和目标
+                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
+                    
+                    # 记录初始机器人位置
+                    initial_robots_positions = robots_positions[:]
+                    
+                    # 运行GWO算法
+                    final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
+                        map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope, stop_step
+                    )
+                    
+                    # 更新地图上的机器人位置
+                    for pos in initial_robots_positions:
+                        map_grid[pos] = 0
+                    for pos in final_positions:
+                        map_grid[pos] = 2
+                    
+                    # 记录本次迭代次数
+                    iteration_to_plot.append(iteration)
+                
+                # 计算本次地图生成的平均迭代次数
+                avg_iteration = sum(iteration_to_plot) / len(iteration_to_plot)
+                avg_iterations_by_case[case].append(avg_iteration)
+        
+        # 计算每个网格大小的平均迭代次数
+        for case in range(1, 9):
+            avg_iterations_by_case[case] = sum(avg_iterations_by_case[case]) / len(avg_iterations_by_case[case])
+    
+    # 绘制折线图
+    cases = list(avg_iterations_by_case.keys())
+    avg_iterations = list(avg_iterations_by_case.values())
+    
+    plt.figure(figsize=(12, 8))
+    
+   # plt.figure(figsize=(12, 8))
+    for i, case in enumerate(cases):
+        plt.plot([grid_size], [avg_iterations[i]], marker='o', label=f'Case {case} - {case_descriptions[case]}')
+    plt.title('Average Iterations vs Grid Size for Each Case')
+    plt.xlabel('Grid Size')
+    plt.ylabel('Average Iterations')
+    plt.xticks(grid_test)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def main():
+    # 设置随机种子以保证结果可重复
+    random_seed = random.randint(1, 100)
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    
+    grid_size = 300
+    num_robots = 5
+    step_size = 2
+    target_step_size = 0.8
+    
+    max_iterations = 1000  # 设定最大迭代次数
+    stop_step = step_size
+    
+    scope = 10
+    
+    # 存储每个CASE的平均迭代次数
+    avg_iterations_by_case = {case: [] for case in range(1, 9)}
+
+    robot_rectangle = (1, 1, grid_size-2, grid_size-2)
+    num_obstacles = int(grid_size / 20)
+    obstacle_size = int(grid_size / 20)
+    
+    for case in range(1, 9):  # 按顺序从1到8轮流实验
+        iteration_to_plot = []
+        
+        for _ in range(5):
+            # 生成地图
+            map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
+            
+            # 放置机器人和目标n
+            robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle, case)
+            
+            # 记录初始机器人位置
+            initial_robots_positions = robots_positions[:]
+            
+            # 运行GWO算法
+            final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
+                map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope, stop_step
+            )
+            
+            # 更新地图上的机器人位置
+            for pos in initial_robots_positions:
+                map_grid[pos] = 0
+            for pos in final_positions:
+                map_grid[pos] = 2
+            
+            # 记录本次迭代次数
+            iteration_to_plot.append(iteration)
+        
+        # 计算本次实验的平均迭代次数
+        avg_iteration = sum(iteration_to_plot) / len(iteration_to_plot)
+        avg_iterations_by_case[case].append(avg_iteration)
+    
+    # 计算每个CASE的最终平均迭代次数
+    final_avg_iterations_by_case = {}
+    for case in range(1, 9):
+        if avg_iterations_by_case[case]:
+            final_avg_iterations_by_case[case] = sum(avg_iterations_by_case[case]) / len(avg_iterations_by_case[case])
+        else:
+            final_avg_iterations_by_case[case] = None  # 如果没有数据，设置为None或其他适当的值
+    
+    # 输出每个CASE的平均迭代次数
+    for case, avg_iter in final_avg_iterations_by_case.items():
+        if avg_iter is not None:
+            print(f"Average iterations for Case {case}: {avg_iter:.2f}")
+        else:
+            print(f"Average iterations for Case {case}: No data")
+    
+    # 绘制折线图
+    cases = list(final_avg_iterations_by_case.keys())
+    avg_iterations = [final_avg_iterations_by_case[case] for case in cases if final_avg_iterations_by_case[case] is not None]
+    
+    plt.figure(figsize=(12, 8))
+    plt.plot(cases, avg_iterations, marker='o', linestyle='-', color='red')
+    
+    plt.title('Average Iterations vs Distribution Case on a Fixed 300x300 Grid')
+    plt.xlabel('Distribution Case')
+    plt.ylabel('Average Iterations')
+    plt.xticks(cases)
+    plt.grid(True)
+    plt.show()
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    start_time = time.time()
+    main()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    elapsed_time_minute = elapsed_time/60
+    print(f"程序算时间: {elapsed_time:.10f} 秒")
+    print(f'程序算时间: {elapsed_time_minute:.10f} 分')
+    # main()    
 #测试成功率
 def test(iteration_to_plot):
     temp_all = len(iteration_to_plot)
@@ -506,84 +883,10 @@ def success_rate_output(iteration_to_plot,success_rates):
     #print(success_rates)
     return iteration_success_rate,success_rates
 
+#迭代次数的测试
+def test_iteration(iteration_all):
+    pass
 
-def main():
-    # 设置随机种子以保证结果可重复
-    random_seed = random.randint(1, 100)
-    random.seed(random_seed)
-    np.random.seed(random_seed)
-    
-    grid_sizes = [100, 200, 300, 400, 600, 800, 1000]
-    grid_size_test = [400]
-    num_robots = 5
-    step_size = 2
-    target_step_size = 1
-    
-    
-    
-    # 存储每个网格大小的成功率
-    #收敛半径
-    stop_size = step_size
-    success_rates_by_grid_size = {}
-
-    for grid_size in grid_size_test:
-        robot_rectangle = (1, 1, grid_size - 2, grid_size - 2)
-        success_rates = []
-        num_obstacles = int(grid_size / 20)
-        obstacle_size = int(grid_size / 20)
-        max_iterations = int(grid_size * math.sqrt(2) * 1)
-        scope = 10
-        for j in range(1):  # 每次搜索三轮
-            iteration_to_plot = []
-            for i in range(5):  # 每轮搜索五次
-                # 生成地图
-                map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
-                
-                # 放置机器人和目标
-                robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
-                
-                # 记录初始机器人位置
-                initial_robots_positions = robots_positions[:]
-                
-                # 运行GWO算法
-                final_positions, paths, final_target_position, target_path, iteration = gwo_algorithm(
-                    map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope,stop_size
-                )
-                
-                # 更新地图上的机器人位置
-                for pos in initial_robots_positions:
-                    map_grid[pos] = 0
-                for pos in final_positions:
-                    map_grid[pos] = 2
-                
-                # 绘制最终地图及路径
-                plot_map(map_grid, initial_robots_positions, final_positions, target_path, paths)
-                
-                iteration_to_plot.append(iteration)
-            
-            # 输出成功率，并存储
-            iteration_success_rate, success_rates = success_rate_output(iteration_to_plot, success_rates)
-            print(f"Time of {j + 1} success rate is {iteration_success_rate * 100:.2f}%")
-        
-        # 计算每个网格大小的平均成功率
-        avg_success_rate = sum(success_rates) / len(success_rates)
-        success_rates_by_grid_size[grid_size] = avg_success_rate
-        print(f"The average success rate = {avg_success_rate * 100:.2f}% when grid_size = {grid_size}")
-    
-    # 绘制柱状图
-    grid_sizes = list(success_rates_by_grid_size.keys())
-    success_rates = list(success_rates_by_grid_size.values())
-    
-    plt.bar(grid_sizes, success_rates, color='blue',width = 20)
-    plt.title('Success Rate vs Grid Size')
-    plt.xlabel('Grid Size')
-    plt.ylabel('Success Rate (%)')
-    plt.xticks(grid_sizes)
-    plt.yticks(np.arange(0, 1.1, 0.1))
-    plt.show()
-
-if __name__ == "__main__":
-    main()
 
 
 
