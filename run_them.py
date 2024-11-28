@@ -12,11 +12,23 @@ import forehand_function as ff
 import robo_num_main as robo
 import success_main as su
 import distribution_main as dis
+import time 
 
 # 
 if __name__ == "__main__":
+    time_start = time.time()
+    print(f"now start with time = {time_start - time_start}s ")
+    
     su.success_main()
+    time_elaps_fir = time.time() - time_start
+    print(f'fir project \'s done with time = {time_elaps_fir}s ')
+    
     robo.robo_num_main()
+    time_elaps_sec = time.time() - time_start
+    print(f'fir project \'s done with time = {time_elaps_sec}s ')
+    
     dis.distribution_main()
+    time_elaps_thi= time.time() - time_start
+    print(f'fir project \'s done with time = {time_elaps_thi}s ')
     
     

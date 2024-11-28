@@ -441,7 +441,7 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
         # Check termination condition
         min_distance = min([np.sqrt((pos[0] - target_position[0])**2 + (pos[1] - target_position[1])**2) for pos in robots_positions])
         if min_distance < stop_step:
-            print(f"Termination Condition Met: Distance to Target < 5 after {iteration} iterations.")
+            # print(f"Termination Condition Met: Distance to Target < 5 after {iteration} iterations.")
             break
         elif iteration >= max_iterations - 1:
             print("Termination Condition Met: Maximum Iterations Reached.")
