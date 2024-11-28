@@ -19,7 +19,7 @@ def robo_num_main():
     random_seed = random.randint(1, 100)
     random.seed(random_seed)
     np.random.seed(random_seed)
-    
+    num_case =6
     grid_sizes = [300]
     robot_counts = [3, 6, 9 ,12]
     robot_test = [3,6]
@@ -47,7 +47,7 @@ def robo_num_main():
                     map_grid = ff.generate_map(grid_size, num_obstacles, obstacle_size)
                     
                     # 放置机器人和目标
-                    robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle, random.randint(1, 8))
+                    robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle, random.randint(1, num_case))
                     
                     # 记录初始机器人位置
                     initial_robots_positions = robots_positions[:]

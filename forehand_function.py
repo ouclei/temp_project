@@ -71,25 +71,25 @@ def get_random_points_inside_rectangle(rectangle, num_points, case):
             for _ in range(num_points)
         ]
     
+    # elif case == 5:
+    #     # 5. 正对角线分布
+    #     diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
+    #     points = [
+    #         (int(x_min + i * (x_max - x_min) / (num_points - 1)),
+    #          int(y_min + i * (y_max - y_min) / (num_points - 1)))
+    #         for i in range(num_points)
+    #     ]
+    
+    # elif case == 6:
+    #     # 6. 反对角线分布
+    #     diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
+    #     points = [
+    #         (int(x_min + i * (x_max - x_min) / (num_points - 1)),
+    #          int(y_max - i * (y_max - y_min) / (num_points - 1)))
+    #         for i in range(num_points)
+    #     ]
+    
     elif case == 5:
-        # 5. 正对角线分布
-        diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
-        points = [
-            (int(x_min + i * (x_max - x_min) / (num_points - 1)),
-             int(y_min + i * (y_max - y_min) / (num_points - 1)))
-            for i in range(num_points)
-        ]
-    
-    elif case == 6:
-        # 6. 反对角线分布
-        diagonal_length = max(abs(x_max - x_min), abs(y_max - y_min))
-        points = [
-            (int(x_min + i * (x_max - x_min) / (num_points - 1)),
-             int(y_max - i * (y_max - y_min) / (num_points - 1)))
-            for i in range(num_points)
-        ]
-    
-    elif case == 7:
         # 7. 过区域中心点平行X轴分布
         center_x = (x_min + x_max) // 2
         center_y = (y_min + y_max) // 2
@@ -98,7 +98,7 @@ def get_random_points_inside_rectangle(rectangle, num_points, case):
             for _ in range(num_points)
         ]
     
-    elif case == 8:
+    elif case == 6:
         # 8. 过中心点平行Y轴分布
         center_x = (x_min + x_max) // 2
         center_y = (y_min + y_max) // 2

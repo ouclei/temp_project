@@ -20,7 +20,7 @@ def success_main():
     random.seed(random_seed)
     np.random.seed(random_seed)
     print(f'the random seed is :{random_seed}')
-    
+    num_case = 6
     grid_sizes = [100, 200, 300, 400, 500, 600, 800, 1000]
     grid_test_iterations = [100, 200, 300]
     grid_size_success_rate = [400]
@@ -49,7 +49,7 @@ def success_main():
             
             for _ in range(5):
                 map_grid = ff.generate_map(grid_size, num_obstacles, obstacle_size)
-                robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle, random.randint(1,8))
+                robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle, random.randint(1,num_case))
                 initial_robots_positions = robots_positions[:]
                 
                 final_positions, paths, final_target_position, target_path, iteration = ff.gwo_algorithm(
