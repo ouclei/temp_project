@@ -734,7 +734,7 @@ def main3():
                     map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
                     
                     # 放置机器人和目标
-                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle,case)
+                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
                     
                     # 记录初始机器人位置
                     initial_robots_positions = robots_positions[:]
@@ -871,15 +871,11 @@ def main():
 
     # 遍历每种CASE
     for case in range(1, 9):
-        if case == 5: 
-            continue
-        if case ==6:
-            continue
-        print(f'\ncaseof {case}')
+        print(f'time of {case}\n')
         iteration_to_plot = []
 
-        # 重复实验10次
-        for _ in range(10):
+        # 重复实验5次
+        for _ in range(5):
             try:
                 # 生成地图
                 map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
@@ -946,8 +942,6 @@ def main():
 if __name__ == "__main__":
     start_time = time.time()
     try:
-        # main3()
-        # main4()
         main()
     except KeyboardInterrupt:
         print("手动终止")

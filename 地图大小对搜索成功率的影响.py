@@ -4,7 +4,7 @@ Created on Sat Nov 16 05:15:56 2024
 
 @author: lei
 """
-#time 11.26
+
 import random
 import matplotlib.pyplot as plt
 import numpy as np

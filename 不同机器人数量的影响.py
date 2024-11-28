@@ -120,32 +120,35 @@ def check_positions(map_grid, positions):
     return valid_positions
 
 # 主检测逻辑
-def generate_valid_positions(map_grid, rectangle, num_robots):
+def generate_valid_positions(map_grid, rectangle, num_robots, case):
     """
     生成有效的机器人初始坐标点
     map_grid: 地图数组
     rectangle: 矩形边界 (x_min, y_min, x_max, y_max)
     num_robots: 需要的机器人数量
+    case: 分布类型对应的数字 (1-8)
     返回有效坐标点列表
     """
-    robots_positions = []
+    robots_positions = set()
+    
     while len(robots_positions) < num_robots:
         # 生成随机点
-        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots,random.randint(1,8))
+        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots, case)
         # 检测随机点是否有效
         valid_positions = check_positions(map_grid, candidate_positions)
-        # 添加有效点到最终列表
-        robots_positions.extend(valid_positions[:num_robots - len(robots_positions)])
-    return robots_positions
+        # 添加有效点到最终集合
+        robots_positions.update(valid_positions)
+    
+    return list(robots_positions)
 
-def place_robots_and_target(map_grid, num_robots,robot_ractangle):
+def place_robots_and_target(map_grid, num_robots,robot_ractangle,case):
     grid_size = map_grid.shape[0]
     robots_positions = []
     
     # 固定机器人在 (50, 50) 范围内的不同位置
     #随机生成坐标，如果碰见障碍物，重新生成
     
-    position0 = generate_valid_positions(map_grid, robot_ractangle, num_robots)        
+    position0 = generate_valid_positions(map_grid, robot_ractangle, num_robots,case)        
     fixed_positions = position0
     tag_while = True
     tag_right = 0
@@ -424,7 +427,8 @@ def main2():
     # position3 = [(100, 0), (100, 80), (5, 160), (5, 210), (5, 280)]
     grid_1 = [100,200,300,400]
     grid_2 = [600,800,1000]
-    for grid_size in grid_2:
+    grid_test = [300]
+    for grid_size in grid_test:
         #每次搜索三轮，一轮5次
         success_rates = []
         num_obstacles = int(grid_size/20)
@@ -577,7 +581,7 @@ def main_succ_rate_plus_ite_times():
     np.random.seed(random_seed)
     
     grid_sizes = [300]
-    robot_counts = [3, 6]
+    robot_counts = [3, 6, 9, 12]
     step_size = 2
     target_step_size = 1
     scope = 10
@@ -587,7 +591,7 @@ def main_succ_rate_plus_ite_times():
         robot_rectangle = (1, 1, grid_size, grid_size)
         num_obstacles = int(grid_size / 20)
         obstacle_size = int(grid_size / 20)
-        max_iterations = int(grid_size * math.sqrt(2))
+        max_iterations = 300
         
         # 存储不同机器人数量的成功率和迭代次数
         success_rates_dict = {num_robots: [] for num_robots in robot_counts}
@@ -603,7 +607,7 @@ def main_succ_rate_plus_ite_times():
                     map_grid = generate_map(grid_size, num_obstacles, obstacle_size)
                     
                     # 放置机器人和目标
-                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle)
+                    robots_positions, target_position = place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle,random.randint(1,8))
                     
                     # 记录初始机器人位置
                     initial_robots_positions = robots_positions[:]
