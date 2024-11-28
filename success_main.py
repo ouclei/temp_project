@@ -69,7 +69,7 @@ def success_main():
         avg_iterations.append(sum(iteration_results) / len(iteration_results))
     
     print("now it's for success")
-    for grid_size in grid_size_success_rate:
+    for grid_size in grid_sizes:
         robot_rectangle = (1, 1, grid_size - 2, grid_size - 2)
         success_rates = []
         num_obstacles = int(grid_size / 20)
