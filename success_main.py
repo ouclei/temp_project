@@ -110,7 +110,7 @@ def success_main():
     
     print("now it's painting")
     # 绘制折线图
-    axs[0].plot(grid_test_iterations, avg_iterations, marker='x', linestyle='-', color='red')
+    axs[0].plot(grid_sizes, avg_iterations, marker='x', linestyle='-', color='red')
     axs[0].set_title('Average Iterations vs Grid Size')
     axs[0].set_xlabel('Grid Size')
     axs[0].set_ylabel('Average Iterations')
