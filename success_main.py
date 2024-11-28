@@ -82,7 +82,7 @@ def success_main():
             # print("\niterations")
             for i in range(5):  
                 map_grid = ff.generate_map(grid_size, num_obstacles, obstacle_size)
-                robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle,random.randint(1,8))
+                robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle,random.randint(1,num_case))
                 initial_robots_positions = robots_positions[:]
                 
                 final_positions, paths, final_target_position, target_path, iteration = ff.gwo_algorithm(
