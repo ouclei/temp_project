@@ -86,6 +86,6 @@ def success_main():
     plt.tight_layout()
     plt.show()
 
-# 假设这是调用函数的地方
-if __name__ == "__main__":
-    success_main()
+# # 假设这是调用函数的地方
+# if __name__ == "__main__":
+#     success_main()

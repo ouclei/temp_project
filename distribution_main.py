@@ -4,16 +4,18 @@ import matplotlib.pyplot as plt
 import math
 import forehand_function as ff
 
-# -*- coding: utf-8 -*-
-
-def distribution_main():
-    # 设置随机种子以保证结果可重复
+# 设置随机种子以保证结果可重复
+def set_random_seed():
     random_seed = random.randint(1, 100)
     random.seed(random_seed)
     np.random.seed(random_seed)
-    print(f"Random seed used: {random_seed}")  # 打印随机种子，方便调试和结果复现
-    num_case =6
+    print(f"Random seed used: {random_seed}")
+
+def distribution_main():
+    set_random_seed()
+    
     # 参数配置
+    num_case = 6
     grid_size = 300
     num_robots = 5
     step_size = 2
@@ -28,60 +30,63 @@ def distribution_main():
     obstacle_size = int(grid_size / 20)
 
     # 存储每个CASE的平均迭代次数（仅支持1到8）
-    avg_iterations_by_case = {case: None for case in range(1, num_case)}
+    avg_iterations_by_case = {case: [] for case in range(1, num_case )}
+
+    # 辅助函数：执行单次实验并返回迭代次数
+    def run_single_experiment(case):
+        try:
+            # 生成地图
+            map_grid = ff.generate_map(grid_size, num_obstacles, obstacle_size)
+
+            # 放置机器人和目标
+            robots_positions, target_position = ff.place_robots_and_target(
+                map_grid.copy(), num_robots, robot_rectangle, case
+            )
+
+            # 记录初始机器人位置
+            initial_robots_positions = robots_positions[:]
+
+            # 运行灰狼优化算法 (GWO)
+            final_positions, paths, final_target_position, target_path, iteration = ff.gwo_algorithm(
+                map_grid.copy(), robots_positions, target_position,
+                max_iterations, step_size, target_step_size, scope, stop_step
+            )
+
+            # 检查结果是否合理
+            if not final_positions or iteration >= max_iterations:
+                print(f"Warning: Algorithm did not converge in case {case}")
+                return None
+
+            # 更新地图上的机器人位置
+            for pos in initial_robots_positions:
+                if 0 <= pos[0] < grid_size and 0 <= pos[1] < grid_size:
+                    map_grid[pos] = 0  # 清除旧位置
+            for pos in final_positions:
+                if 0 <= pos[0] < grid_size and 0 <= pos[1] < grid_size:
+                    map_grid[pos] = 2  # 标记新位置
+
+            return iteration
+
+        except Exception as e:
+            print(f"Error occurred in case {case}: {e}")
+            return None
 
     # 遍历每种CASE
-    for case in range(1, num_case):
-        # if case == 5: 
-        #     continue
-        # if case == 6:
-        #     continue
-        print(f'\ncaseof {case}')
+    for case in range(1, num_case ):
+        print(f'\nCase {case}')
         iteration_to_plot = []
 
         # 重复实验10次
         for _ in range(10):
-            try:
-                # 生成地图
-                map_grid = ff.generate_map(grid_size, num_obstacles, obstacle_size)
-
-                # 放置机器人和目标
-                robots_positions, target_position = ff.place_robots_and_target(
-                    map_grid.copy(), num_robots, robot_rectangle, case
-                )
-
-                # 记录初始机器人位置
-                initial_robots_positions = robots_positions[:]
-
-                # 运行灰狼优化算法 (GWO)
-                final_positions, paths, final_target_position, target_path, iteration = ff.gwo_algorithm(
-                    map_grid.copy(), robots_positions, target_position,
-                    max_iterations, step_size, target_step_size, scope, stop_step
-                )
-
-                # 检查结果是否合理
-                if not final_positions or iteration >= max_iterations:
-                    print(f"Warning: Algorithm did not converge in case {case}")
-                    continue
-
-                # 更新地图上的机器人位置
-                for pos in initial_robots_positions:
-                    if 0 <= pos[0] < grid_size and 0 <= pos[1] < grid_size:
-                        map_grid[pos] = 0  # 清除旧位置
-                for pos in final_positions:
-                    if 0 <= pos[0] < grid_size and 0 <= pos[1] < grid_size:
-                        map_grid[pos] = 2  # 标记新位置
-
-                # 记录当前实验的迭代次数
+            iteration = run_single_experiment(case)
+            if iteration is not None:
                 iteration_to_plot.append(iteration)
-
-            except Exception as e:
-                print(f"Error occurred in case {case}: {e}")
-                continue
 
         # 计算当前CASE的平均迭代次数
         if iteration_to_plot:
             avg_iterations_by_case[case] = sum(iteration_to_plot) / len(iteration_to_plot)
+        else:
+            avg_iterations_by_case[case] = None
 
     # 输出每个CASE的平均迭代次数
     for case, avg_iter in avg_iterations_by_case.items():
@@ -106,9 +111,3 @@ def distribution_main():
 
 if __name__ == "__main__":
     distribution_main()
-
-# if __name__ == "__main__":
-#     main_succ_rate_plus_ite_times()
-
-
-
