@@ -29,7 +29,7 @@ def success_main():
     target_step_size_iterations = 0.8
     target_step_size_success_rate = 1
     
-    max_iterations = 1000  # 设定最大迭代次数
+    max_iterations = 1500 # 设定最大迭代次数
     stop_step = step_size
     scope = 10
     
@@ -74,7 +74,7 @@ def success_main():
         success_rates = []
         num_obstacles = int(grid_size / 20)
         obstacle_size = int(grid_size / 20)
-        max_iterations = int(grid_size * math.sqrt(2) * 1)
+        #max_iterations = int(grid_size * math.sqrt(2) * 1)
         scope = 10
         
         for j in range(1):  

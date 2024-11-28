@@ -31,7 +31,7 @@ def robo_num_main():
         robot_rectangle = (1, 1, grid_size-2, grid_size-2)
         num_obstacles = int(grid_size / 20)
         obstacle_size = int(grid_size / 20)
-        max_iterations = 300
+        max_iterations = 1500
         
         # 存储不同机器人数量的成功率和迭代次数
         success_rates_dict = {num_robots: [] for num_robots in robot_counts}

@@ -18,7 +18,7 @@ def distribution_main():
     num_robots = 5
     step_size = 2
     target_step_size = 0.8
-    max_iterations = 300  # 最大迭代次数
+    max_iterations = 1500  # 最大迭代次数
     stop_step = step_size
     scope = 10
 
