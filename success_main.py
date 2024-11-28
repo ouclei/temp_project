@@ -38,7 +38,7 @@ def success_main():
     success_rates_by_grid_size = {}
     
     print("now it's for iteration")
-    for grid_size in grid_test_iterations:
+    for grid_size in grid_sizes:
         iteration_results = []
         robot_rectangle = (1, 1, grid_size-2, grid_size-2)
         for _ in range(1):

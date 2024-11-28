@@ -37,7 +37,7 @@ def robo_num_main():
         success_rates_dict = {num_robots: [] for num_robots in robot_counts}
         iteration_counts_dict = {num_robots: [] for num_robots in robot_counts}
         
-        for num_robots in robot_test:
+        for num_robots in robot_counts:
             for j in range(1):  # 每次搜索三轮
                 iteration_to_plot = []
                 iteration_counts = []
