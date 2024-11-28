@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from your_module import ff  # 假设ff是你定义的一些功能的模块
+import forehand_function as  ff  # 假设ff是你定义的一些功能的模块
 
 def robo_num_main():
     # 设置随机种子以保证结果可重复
