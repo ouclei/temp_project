@@ -120,7 +120,7 @@ def success_main():
     grid_sizes = list(success_rates_by_grid_size.keys())
     success_rates = list(success_rates_by_grid_size.values())
     
-    axs[1].bar(grid_sizes, success_rates, color='blue', width=20)
+    axs[1].bar(grid_sizes, success_rates, color='blue', width=10)
     axs[1].set_title('Success Rate vs Grid Size')
     axs[1].set_xlabel('Grid Size')
     axs[1].set_ylabel('Success Rate (%)')
