@@ -142,7 +142,7 @@ def generate_valid_positions(map_grid, rectangle, num_robots, case):
     
     while len(robots_positions) < num_robots:
         # 生成随机点
-        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots, case)
+        candidate_positions = get_random_points_inside_rectangle(rectangle, num_robots - len(robots_positions), case)
         # 检测随机点是否有效
         valid_positions = check_positions(map_grid, candidate_positions)
         # 添加有效点到最终集合
@@ -319,7 +319,7 @@ def a_star_search(map_grid, start, goal):
     return path
 
 
-def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=1000, step_size=2, target_step_size=1, scope=100,stop_step=2):
+def gwo_algorithm0(map_grid, robots_positions, target_position, max_iterations=1000, step_size=2, target_step_size=1, scope=100,stop_step=2):
     num_robots = len(robots_positions)
     alpha_pos = [(float('inf'), float('inf'))] * num_robots
     beta_pos = [(float('inf'), float('inf'))] * num_robots
@@ -435,6 +435,11 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
                     paths[i].append(next_position)
                 else:
                     print(f"Robot {i} failed to find a valid path.")
+                    while(path):
+                        path = a_star_search(map_grid, robots_positions[i], target_position)
+                    next_position = path[0]  # 获取路径中的下一步
+                    robots_positions[i] = next_position
+                    paths[i].append(next_position)
                     
         
                 
@@ -511,6 +516,277 @@ def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=10
     # break
 
     return robots_positions, paths, target_position, target_path,iteration
+
+import random
+import numpy as np
+
+def gwo_algorithm(map_grid, robots_positions, target_position, max_iterations=1000, step_size=2, target_step_size=1, scope=100, stop_step=2):
+    num_robots = len(robots_positions)
+    alpha_pos = [(float('inf'), float('inf'))] * num_robots
+    beta_pos = [(float('inf'), float('inf'))] * num_robots
+    delta_pos = [(float('inf'), float('inf'))] * num_robots
+    
+    alpha_score = [float('-inf')] * num_robots
+    beta_score = [float('-inf')] * num_robots
+    delta_score = [float('-inf')] * num_robots
+    
+    grid_size = map_grid.shape[0]
+    
+    # 初始化路径记录
+    paths = [[] for _ in range(num_robots)]
+    for i in range(num_robots):
+        paths[i].append(robots_positions[i])
+    
+    # 记录目标路径
+    target_path = [target_position]
+    
+    # 自适应惯性权重参数
+    w_max = 0.9
+    w_min = 0.4
+    
+    for iteration in range(max_iterations):
+        fitness_values = calculate_fitness(robots_positions, target_position)
+        
+        # Update Alpha, Beta, Delta
+        for i in range(num_robots):
+            if fitness_values[i] > alpha_score[i]:
+                alpha_score[i] = fitness_values[i]
+                alpha_pos[i] = robots_positions[i]
+            
+            if fitness_values[i] > beta_score[i] and fitness_values[i] <= alpha_score[i]:
+                beta_score[i] = fitness_values[i]
+                beta_pos[i] = robots_positions[i]
+            
+            if fitness_values[i] > delta_score[i] and fitness_values[i] <= beta_score[i]:
+                delta_score[i] = fitness_values[i]
+                delta_pos[i] = robots_positions[i]
+        
+        a = 2 - iteration * (2 / max_iterations)  # linearly decreased from 2 to 0
+        
+        # 自适应惯性权重
+        w = w_max - ((w_max - w_min) * (iteration / max_iterations))
+        
+        for i in range(num_robots):
+            A1 = 2 * a * random.random() - a
+            C1 = 2 * random.random()
+            D_alpha = [abs(C1 * alpha_pos[i][d] - robots_positions[i][d]) for d in range(2)]
+            X1 = [alpha_pos[i][d] - A1 * D_alpha[d] for d in range(2)]
+            
+            A2 = 2 * a * random.random() - a
+            C2 = 2 * random.random()
+            D_beta = [abs(C2 * beta_pos[i][d] - robots_positions[i][d]) for d in range(2)]
+            X2 = [beta_pos[i][d] - A2 * D_beta[d] for d in range(2)]
+            
+            A3 = 2 * a * random.random() - a
+            C3 = 2 * random.random()
+            D_delta = [abs(C3 * delta_pos[i][d] - robots_positions[i][d]) for d in range(2)]
+            X3 = [delta_pos[i][d] - A3 * D_delta[d] for d in range(2)]
+            
+            new_position = [
+                int(round((X1[d] + X2[d] + X3[d]) / 3)) for d in range(2)
+            ]
+            
+            # Optimal Learning Search Strategy
+            best_position = alpha_pos[i]
+            learning_factor = 0.8
+            optimal_position = (
+                int(best_position[0] + learning_factor * (target_position[0] - best_position[0])),
+                int(best_position[1] + learning_factor * (target_position[1] - best_position[1]))
+            )
+            
+            # Ensure the optimal position is within bounds and not on an obstacle
+            if 0 <= optimal_position[0] < grid_size and 0 <= optimal_position[1] < grid_size and map_grid[optimal_position[0], optimal_position[1]] == 0:
+                new_position = optimal_position
+            
+            # Calculate the direction vector
+            direction_vector = [new_position[d] - robots_positions[i][d] for d in range(2)]
+            distance = np.linalg.norm(direction_vector)
+            
+            if distance > 0:
+                unit_direction = [direction_vector[d] / distance for d in range(2)]
+                
+                # Adaptive Speed Adjustment Strategy
+                adaptive_step_size = step_size * (1 + random.uniform(-0.1, 0.1))
+                step = [int(unit_direction[d] * adaptive_step_size) for d in range(2)]
+                
+                # 归一化处理，确保横轴或纵轴方向的速度为step_size
+                step = [int(unit_direction[d] * step_size) for d in range(2)]  # 归一化处理
+                
+                new_position = [robots_positions[i][d] + step[d] for d in range(2)]
+            
+            # Ensure the new position is within bounds and not on an obstacle
+            # if 0 <= new_position[0] < grid_size and 0 <= new_position[1] < grid_size and map_grid[new_position[0], new_position[1]] == 0 :
+            #     robots_positions[i] = tuple(new_position)
+            #     paths[i].append(robots_positions[i])
+            # else:
+            #     # Escape Mechanism
+            #     path = a_star_search(map_grid, robots_positions[i], target_position)
+            #     if path:
+            #         next_position = path[0]  # 获取路径中的下一步
+            #         robots_positions[i] = next_position
+            #         paths[i].append(next_position)
+            #     else:
+            #         print(f"Robot {i} failed to find a valid path.")
+            #         while(path):
+            #             path = a_star_search(map_grid, robots_positions[i], target_position)
+            #         next_position = path[0]  # 获取路径中的下一步
+            #         robots_positions[i] = next_position
+            #         paths[i].append(next_position)
+            if 0 <= new_position[0] < grid_size and 0 <= new_position[1] < grid_size and map_grid[new_position[0], new_position[1]] == 0:
+                robots_positions[i] = tuple(new_position)
+                paths[i].append(robots_positions[i])
+            else:
+                # Escape Mechanism
+                path = a_star_search(map_grid, robots_positions[i], target_position)
+                if path:
+                    next_position = path[0]  # 获取路径中的下一步
+                    robots_positions[i] = next_position
+                    paths[i].append(next_position)
+                else:
+                    print(f"Robot {i} failed to find a valid path.")
+                    # 尝试从当前机器人位置重新搜索路径，直到找到有效路径或达到边界条件
+                    while True:
+                        path = a_star_search(map_grid, robots_positions[i], target_position)
+                        if path:
+                            next_position = path[0]  # 获取路径中的下一步
+                            robots_positions[i] = next_position
+                            paths[i].append(next_position)
+                            break  # 找到有效路径后退出循环
+                        else:
+                            # 如果仍然找不到有效路径，尝试随机移动一小步
+                            escape_x = random.randint(-1, 1)
+                            escape_y = random.randint(-1, 1)
+                            new_escape_position = (
+                                min(max(robots_positions[i][0] + escape_x, 0), grid_size - 1),
+                                min(max(robots_positions[i][1] + escape_y, 0), grid_size - 1)
+                            )
+                            if map_grid[new_escape_position[0], new_escape_position[1]] == 0:
+                                robots_positions[i] = new_escape_position
+                                paths[i].append(new_escape_position)
+                                break  # 找到有效位置后退出循环
+                            else:
+                                print(f"Robot {i} still failed to find a valid path, trying random move.")
+                    
+        
+        # Check termination condition
+        min_distance = min([np.sqrt((pos[0] - target_position[0])**2 + (pos[1] - target_position[1])**2) for pos in robots_positions])
+        if min_distance < stop_step:
+            # print(f"Termination Condition Met: Distance to Target < 5 after {iteration} iterations.")
+            break
+        elif iteration >= max_iterations - 1:
+            print("Termination Condition Met: Maximum Iterations Reached.")
+            iteration = -1
+        
+        # Check if any robot is within the scope of the target
+        target_within_scope = False
+        closest_robot_index = None
+        closest_distance = float('inf')
+        for i, pos in enumerate(robots_positions):
+            distance_to_target = np.sqrt((pos[0] - target_position[0])**2 + (pos[1] - target_position[1])**2)
+            if distance_to_target < scope:
+                target_within_scope = True
+                if distance_to_target < closest_distance:
+                    closest_distance = distance_to_target
+                    closest_robot_index = i
+        
+        if target_within_scope:
+            # Calculate escape direction using AFP artificial potential field method
+            escape_direction = [-(robots_positions[closest_robot_index][d] - target_position[d]) for d in range(2)]
+            escape_magnitude = np.linalg.norm(escape_direction)
+            if escape_magnitude > 0:
+                unit_escape_direction = [escape_direction[d] / escape_magnitude for d in range(2)]
+                escape_speed = target_step_size * (1 + (scope - closest_distance) / scope)
+                step = [int(unit_escape_direction[d] * escape_speed) for d in range(2)]
+                
+                # 归一化处理，确保横轴或纵轴方向的速度为target_step_size
+                step = [int(unit_escape_direction[d] * target_step_size) for d in range(2)]  # 归一化处理
+                
+                new_target_position = (target_position[0] + step[0], target_position[1] + step[1])
+                
+                # Ensure the new target position is within bounds and not on an obstacle
+                if 0 <= new_target_position[0] < grid_size and 0 <= new_target_position[1] < grid_size and map_grid[new_target_position[0], new_target_position[1]] == 0:
+                    target_position = new_target_position
+                    target_path.append(target_position)
+                else:
+                    # 使用A*算法计算目标逃逸路径
+                    escape_goal = (
+                        random.randint(0, grid_size - 1),  # 随机生成一个远离机器人的点作为逃逸目标
+                        random.randint(0, grid_size - 1)
+                    )
+                    while map_grid[escape_goal[0], escape_goal[1]] != 0:  # 确保逃逸目标无障碍物
+                        escape_goal = (
+                            random.randint(0, grid_size - 1),
+                            random.randint(0, grid_size - 1)
+                        )
+
+                    path = a_star_search(map_grid, target_position, escape_goal)
+                    if path:
+                        next_escape_position = path[0]  # 获取路径中的下一步
+                        target_position = next_escape_position
+                        target_path.append(target_position)
+                    else:
+                        print("Target failed to escape.")
+
+        
+        # Update target position on map
+        map_grid[:, :] = 0  # Clear previous target and obstacles
+        for x in range(grid_size):
+            for y in range(grid_size):
+                if map_grid[x, y] == 1:  # Keep obstacles
+                    continue
+                elif map_grid[x, y] == 2:  # Keep robots
+                    continue
+                elif (x, y) == target_position:
+                    map_grid[x, y] = 3  # Mark new target position
+    if iteration >= max_iterations:
+        print("达到最大迭代次数，终止算法")
+        print(f"机器人位置: {robots_positions}")
+        print(f"目标位置: {target_position}")
+    # break
+
+    return robots_positions, paths, target_position, target_path, iteration
+def move_robot(i, robots_positions, target_position, map_grid, scope):
+    """
+    移动第 i 个机器人
+    """
+    current_position = robots_positions[i]
+    
+    # Escape Mechanism
+    escape_range = 20
+    while True:
+        escape_x = random.randint(-escape_range, escape_range)
+        escape_y = random.randint(-escape_range, escape_range)
+        new_escape_position = (
+            min(max(current_position[0] + escape_x, 0), map_grid.shape[0] - 1),
+            min(max(current_position[1] + escape_y, 0), map_grid.shape[1] - 1)
+        )
+        
+        if is_within_bounds(new_escape_position, map_grid) and is_no_obstacle_in_scope(new_escape_position, map_grid, 3):
+            break
+        #调试输出
+        print(f'the {i} robots is finding path')
+    
+    robots_positions[i] = new_escape_position
+    return new_escape_position
+def is_within_bounds(position, map_grid):
+    """
+    检查位置是否在地图边界内
+    """
+    x, y = position
+    return 0 <= x < map_grid.shape[0] and 0 <= y < map_grid.shape[1]
+
+def is_no_obstacle_in_scope(position, map_grid, scope):
+    """
+    检查位置周围一定范围内的区域是否有障碍物
+    """
+    x, y = position
+    for dx in range(-scope, scope + 1):
+        for dy in range(-scope, scope + 1):
+            nx, ny = x + dx, y + dy
+            if is_within_bounds((nx, ny), map_grid) and map_grid[nx, ny] != 0:
+                return False
+    return True
+
 #测试成功率
 def test(iteration_to_plot):
     temp_all = len(iteration_to_plot)

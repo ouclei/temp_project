@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-import forehand_function as  ff  # 假设ff是你定义的一些功能的模块
+import forehand_function as ff  # 假设ff是你定义的一些功能的模块
 
 def robo_num_main():
     # 设置随机种子以保证结果可重复
@@ -10,13 +10,15 @@ def robo_num_main():
     np.random.seed(random_seed)
     print(f'the random seed is: {random_seed}')
     
-    # 配置参数
+    # 分布的情况一共六种
     num_case = 6
-    grid_sizes = [300]
+    grid_sizes = [500]
     robot_counts = [3, 6, 9, 12]
+    # tiaoshi
+    robot_counts = [12, 9]
     step_size = 2
     target_step_size = 1
-    scope = 10
+    scope = 100
     max_iterations = 1500
     
     # 初始化存储结构
@@ -37,7 +39,7 @@ def robo_num_main():
             map_grid[pos] = 0
         for pos in final_positions:
             map_grid[pos] = 2
-        return iteration, iteration <= max_iterations
+        return iteration, iteration <= max_iterations, map_grid, initial_robots_positions, final_positions, target_path, paths
     
     # 主循环
     for grid_size in grid_sizes:
@@ -48,12 +50,18 @@ def robo_num_main():
                 iteration_to_plot = []
                 iteration_counts = []
                 
-                for i in range(5):  # 每轮5次
-                    iteration, success = run_single_experiment(
+                for i in range(20):  # 每轮5次
+                    iteration, success, map_grid, initial_robots_positions, final_positions, target_path, paths = run_single_experiment(
                         grid_size, num_robots, robot_rectangle, num_case, max_iterations, step_size, target_step_size, scope
                     )
                     iteration_to_plot.append(iteration)
                     iteration_counts.append(iteration)
+                    
+                    # 绘制当前实验结果图
+                    # plt.figure(figsize=(10, 8))
+                    ff.plot_map(map_grid, initial_robots_positions, final_positions, target_path, paths)
+                    # plt.title(f'Map for {num_robots} Robots (Iteration {i + 1})')
+                    # plt.show()
                 
                 # 输出成功率，并存储
                 iteration_success_rate = sum(iteration_to_plot) / len(iteration_to_plot) <= max_iterations
@@ -91,6 +99,5 @@ def robo_num_main():
     plt.tight_layout()
     plt.show()
 
-# # 假设这是调用函数的地方
 # if __name__ == "__main__":
 #     robo_num_main()

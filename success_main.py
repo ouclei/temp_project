@@ -9,7 +9,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-import forehand_function as  ff  # 假设ff是你定义的一些功能的模块
+import forehand_function as ff  # 假设ff是你定义的一些功能的模块
 
 def success_main():
     # 设置随机种子以保证结果可重复
@@ -21,6 +21,7 @@ def success_main():
     # 配置参数
     num_case = 6
     grid_sizes = [100, 200, 300, 400, 500, 600, 800, 1000]
+    grid_sizes = [500]
     num_robots = 5
     step_size = 2
     target_step_size_iterations = 0.8
@@ -39,9 +40,15 @@ def success_main():
         obstacle_size = int(grid_size / 20)
         map_grid = ff.generate_map(grid_size, num_obstacles, obstacle_size)
         robots_positions, target_position = ff.place_robots_and_target(map_grid.copy(), num_robots, robot_rectangle, random.randint(1, num_case))
-        _, _, _, _, iteration = ff.gwo_algorithm(
+        initial_robots_positions = robots_positions[:]
+        
+        final_positions, paths, final_target_position, target_path, iteration = ff.gwo_algorithm(
             map_grid.copy(), robots_positions, target_position, max_iterations, step_size, target_step_size, scope, stop_step
         )
+        
+        # 绘制当前地图
+        ff.plot_map(map_grid, initial_robots_positions, final_positions, target_path, paths)
+        
         return iteration, iteration <= max_iterations
     
     # 主循环
@@ -56,6 +63,8 @@ def success_main():
             )
             iterations.append(iteration)
             successes.append(success)
+            #调试输出
+            print(f"num_robots = {num_robots}")
         
         avg_iterations.append(sum(iterations) / len(iterations))
         success_rate = sum(successes) / len(successes) * 100
@@ -86,6 +95,6 @@ def success_main():
     plt.tight_layout()
     plt.show()
 
-# # 假设这是调用函数的地方
+# 假设这是调用函数的地方
 # if __name__ == "__main__":
 #     success_main()
