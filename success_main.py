@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import math
 import forehand_function as ff
 
-def main():
+def success_main():
     # 设置随机种子以保证结果可重复
     random_seed = random.randint(1, 100)
     random.seed(random_seed)
@@ -131,7 +131,7 @@ def main():
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
